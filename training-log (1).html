@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Training Log">
+<meta name="theme-color" content="#080808" id="theme-color-meta">
+<title>Training Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg:#080808; --surface:#0d0d0d; --surface2:#121212; --border:#1e1e1e;
+  --text:#e0ddd8; --dim:#666; --muted:#333;
+  --upper:#4fc3f7; --upper-bg:#0d1f2d;
+  --lower:#81c784; --lower-bg:#0d1f0d;
+  --core:#ce93d8;  --core-bg:#1f0d1f;
+  --full:#ffb74d;  --full-bg:#1f1a08;
+  --cali:#ef9a9a;  --cali-bg:#1a0d0d;
+  --pg:#a5d6a7; --gold:#ffe082;
+}
+[data-theme="light"] {
+  --bg:#f5f3f0; --surface:#eeece9; --surface2:#e6e4e0; --border:#d4d1cc;
+  --text:#1a1916; --dim:#6b6860; --muted:#a09d98;
+  --upper:#0284c7; --upper-bg:#e0f2fe;
+  --lower:#16a34a; --lower-bg:#dcfce7;
+  --core:#9333ea;  --core-bg:#f3e8ff;
+  --full:#d97706;  --full-bg:#fef3c7;
+  --cali:#dc2626;  --cali-bg:#fee2e2;
+  --pg:#15803d; --gold:#b45309;
+}
+[data-theme="light"] .note-line       { color:#9a9790; border-bottom-color:#ddd; }
+[data-theme="light"] .ex-name         { color:#4a4845; }
+[data-theme="light"] .ex-sets-label   { color:#bbb; }
+[data-theme="light"] .ex-block        { border-bottom-color:#e2e0dc; }
+[data-theme="light"] .ex-sets-bar     { background:#e2e0dc; }
+[data-theme="light"] .block-muscle    { color:#555; }
+[data-theme="light"] .set-dot         { border-color:#d0ceca; }
+[data-theme="light"] .weight-badge    { color:#aaa; }
+[data-theme="light"] .weight-badge.hw { background:#fef9ec; border-color:#fcd34d; color:var(--full); }
+[data-theme="light"] .prog-pill       { background:#f0faf0; border-color:#86efac; color:var(--pg); }
+[data-theme="light"] .pr-badge        { background:#fff8e1; border-color:#fcd34d; color:#b45309; }
+[data-theme="light"] .modal-handle    { background:#d4d1cc; }
+[data-theme="light"] .modal-input     { border-color:#d4d1cc; }
+[data-theme="light"] .modal-input:focus { border-color:#a09d98; }
+[data-theme="light"] .modal-save      { background:var(--surface2); border-color:#c8c5c0; }
+[data-theme="light"] #rest-timer      { background:#eceae7; border-top-color:#d4d1cc; }
+[data-theme="light"] .ring-bg         { stroke:#d4d1cc; }
+[data-theme="light"] .rest-day-view   { color:#ccc; }
+[data-theme="light"] .prog-overlay    { background:rgba(245,243,240,0.97); }
+[data-theme="light"] .day-btn.active  { border-color:rgba(26,25,22,0.4); background:var(--surface2); }
+[data-theme="light"] .filter-btn.on   { background:var(--surface2); border-color:rgba(0,0,0,0.15); }
+[data-theme="light"] .wk-banner       { background:linear-gradient(90deg,#f0faf0,#ecf7ec); border-color:#86efac; }
+[data-theme="light"] .wk-banner .wb-sub { color:#6abf6a; }
+
+html,body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'DM Mono',monospace; transition:background .25s,color .25s; }
+
+/* LAYOUT */
+#app { display:flex; flex-direction:column; height:100vh; height:100dvh; }
+#header   { padding:max(16px,env(safe-area-inset-top)) 18px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
+#wkstrip  { padding:12px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+#scroll   { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:max(90px,calc(80px + env(safe-area-inset-bottom))); }
+
+/* HEADER */
+.hrow { display:flex; align-items:flex-end; justify-content:space-between; }
+.htitle { display:flex; align-items:baseline; gap:10px; }
+.htitle h1 { font-family:'Bebas Neue'; font-size:36px; letter-spacing:.05em; line-height:1; }
+.wk-badge { font-size:9px; color:var(--muted); letter-spacing:3px; }
+.hsubrow { display:flex; align-items:center; gap:10px; margin-top:2px; }
+.hsub { font-size:8px; color:var(--muted); letter-spacing:1.5px; }
+.hbtns { display:flex; align-items:flex-end; gap:6px; }
+.hbtn { background:transparent; border:1px solid var(--border); color:var(--muted); padding:4px 9px; font-family:'DM Mono'; font-size:7px; letter-spacing:1.5px; border-radius:2px; cursor:pointer; transition:all .15s; }
+.hbtn:active { border-color:var(--gold); color:var(--gold); }
+.theme-btn { width:28px; height:28px; padding:0; display:flex; align-items:center; justify-content:center; font-size:13px; }
+
+/* WORKOUT CLOCK */
+.wclock { display:flex; align-items:baseline; gap:4px; font-family:'Bebas Neue'; font-size:13px; letter-spacing:.05em; color:var(--muted); cursor:pointer; user-select:none; transition:color .3s; }
+.wclock.running { color:var(--dim); }
+.wclock.over    { color:#ffb74d; }
+.wclock.wayover { color:#ef5350; }
+.wcdot { width:5px; height:5px; border-radius:50%; background:currentColor; animation:cpulse 1.2s ease-in-out infinite; flex-shrink:0; }
+.wcdot.off { animation:none; opacity:.2; }
+@keyframes cpulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* WEEK STRIP */
+.wgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.day-btn { background:transparent; border:1px solid var(--border); color:var(--muted); padding:7px 3px; cursor:pointer; font-family:'DM Mono'; font-size:7px; letter-spacing:.5px; text-align:center; border-radius:3px; transition:all .15s; position:relative; user-select:none; }
+.day-btn .dn { font-family:'Bebas Neue'; font-size:16px; letter-spacing:.03em; display:block; line-height:1.1; }
+.day-btn .dl { font-size:6px; line-height:1.3; display:block; }
+.day-btn.active { border-color:rgba(224,221,216,.5); color:var(--text); background:var(--surface2); }
+.day-btn.rest   { opacity:.35; cursor:default; }
+.day-btn.done::before { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--pg); }
+
+/* SESSION */
+.si { padding:14px 16px 0; }
+.sh { margin-bottom:12px; }
+.str { display:flex; align-items:baseline; justify-content:space-between; }
+.stitle { font-family:'Bebas Neue'; font-size:24px; letter-spacing:.05em; }
+.stime  { font-size:9px; color:var(--muted); }
+.tags-row { display:flex; gap:5px; margin-top:6px; }
+.ztag { font-size:7px; letter-spacing:1.5px; padding:2px 6px; border-radius:2px; font-weight:500; }
+.oprog { margin-top:10px; display:flex; align-items:center; gap:10px; }
+.opbar { flex:1; height:2px; background:var(--surface2); border-radius:1px; overflow:hidden; }
+.opfill { height:100%; background:rgba(224,221,216,.35); border-radius:1px; transition:width .4s; }
+.oplbl { font-size:9px; color:var(--muted); white-space:nowrap; }
+
+/* WEEK DONE BANNER */
+.wk-banner { background:linear-gradient(90deg,#0d1a0d,#0a1a0a); border:1px solid #2a4a2a; border-radius:3px; padding:8px 12px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.wb-icon { font-size:12px; }
+.wb-text { font-size:8px; color:var(--pg); letter-spacing:1.5px; flex:1; }
+.wb-sub  { font-size:7px; color:#4a7a4a; letter-spacing:.5px; }
+
+/* FILTER */
+.frow { display:flex; gap:4px; margin-bottom:12px; overflow-x:auto; padding-bottom:2px; }
+.frow::-webkit-scrollbar { display:none; }
+.filter-btn { background:transparent; border:1px solid var(--border); color:var(--muted); padding:4px 10px; cursor:pointer; font-family:'DM Mono'; font-size:8px; letter-spacing:1.5px; border-radius:2px; transition:all .15s; white-space:nowrap; }
+.filter-btn.on { color:var(--text); border-color:rgba(255,255,255,.2); background:var(--surface2); }
+
+/* WARMUP */
+.wu-card { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:12px 14px; margin-bottom:8px; }
+.card-lbl { font-size:8px; color:var(--muted); letter-spacing:3px; margin-bottom:8px; }
+.wu-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--border); font-size:11px; }
+.wu-row:last-child { border-bottom:none; }
+.wu-name { color:var(--dim); }
+.wu-det  { color:var(--muted); font-size:9px; text-align:right; max-width:55%; }
+
+/* BLOCK */
+.block { border:1px solid var(--border); border-radius:4px; overflow:hidden; margin-bottom:8px; transition:opacity .3s; border-left-width:2px; }
+.block.done { opacity:.5; }
+.bhead { background:var(--surface); padding:9px 13px; display:flex; align-items:center; justify-content:space-between; }
+.bhl { display:flex; align-items:center; gap:8px; }
+.bmuscle { font-family:'Bebas Neue'; font-size:15px; letter-spacing:1px; color:#aaa; }
+.bztag { font-size:7px; letter-spacing:1px; padding:1px 5px; border-radius:2px; }
+.bhr { display:flex; align-items:center; gap:6px; }
+.editable { border-bottom:1px dashed rgba(255,255,255,.12); cursor:pointer; transition:color .15s; }
+.editable:active { color:#fff; }
+.sets-ct { font-size:10px; color:var(--muted); }
+.rest-badge { font-size:8px; color:var(--muted); padding:2px 6px; border:1px solid var(--border); border-radius:2px; letter-spacing:.5px; }
+.bbody { background:var(--bg); padding:10px 13px; }
+.note { font-size:8px; color:#484848; font-style:italic; line-height:1.6; padding-bottom:7px; margin-bottom:8px; border-bottom:1px solid #111; letter-spacing:.3px; }
+
+/* EXERCISE */
+.ex-block { border-bottom:1px solid #0e0e0e; padding:8px 0; }
+.ex-block:last-of-type { border-bottom:none; }
+.ex-row { display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; }
+.ex-name { font-size:11px; color:#999; }
+.ex-reps { font-size:10px; color:var(--muted); }
+.weight-badge { font-size:9px; color:#333; border:1px solid var(--border); padding:3px 8px; border-radius:2px; cursor:pointer; transition:all .15s; min-width:52px; text-align:center; letter-spacing:.5px; }
+.weight-badge.hw { color:var(--full); border-color:#3a2a08; background:#130f00; }
+
+/* SET DOTS */
+.ex-sets-row { margin-top:6px; display:flex; align-items:center; gap:3px; flex-wrap:wrap; }
+.ex-sets-label { font-size:7px; color:#1f1f1f; letter-spacing:1.5px; margin-right:2px; min-width:20px; }
+.set-dot { width:22px; height:22px; border-radius:3px; border:1px solid #1e1e1e; display:flex; align-items:center; justify-content:center; font-size:8px; color:transparent; cursor:pointer; transition:all .12s; flex-shrink:0; }
+.set-dot.on { color:#666; }
+.ex-sets-bar { flex:1; min-width:20px; height:1px; background:#0f0f0f; margin-left:4px; border-radius:1px; overflow:hidden; }
+.ex-sets-fill { height:100%; opacity:.45; transition:width .3s; }
+
+/* PILLS */
+.prog-pill { font-size:7px; letter-spacing:1px; padding:1px 5px; border-radius:10px; background:#0d1a08; border:1px solid #2a4a1a; color:var(--pg); margin-left:4px; white-space:nowrap; }
+.prog-pill.new { background:#1a1500; border-color:#4a3a00; color:var(--gold); animation:ppop .4s ease; }
+.pr-badge { font-size:7px; letter-spacing:1px; padding:1px 5px; border-radius:10px; background:#1a0f00; border:1px solid #4a2f00; color:#ffb74d; margin-left:3px; white-space:nowrap; animation:ppop .5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes ppop { 0%{transform:scale(0);opacity:0} 70%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+
+/* REST DAY */
+.rest-day-view { flex:1; display:flex; align-items:center; justify-content:center; font-size:11px; color:#1e1e1e; letter-spacing:3px; }
+
+/* REST TIMER */
+#rest-timer { position:fixed; bottom:0; left:0; right:0; z-index:150; background:#0a0a0a; border-top:1px solid #1a1a1a; padding:12px 18px max(14px,env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1); display:flex; align-items:center; gap:16px; }
+#rest-timer.show { transform:translateY(0); }
+#rest-timer.flash { animation:tflash .5s ease; }
+@keyframes tflash { 0%{background:#0a0a0a} 25%{background:#0a1a0a;border-top-color:#2a4a2a} 100%{background:#0a0a0a} }
+.ring-wrap { position:relative; width:56px; height:56px; flex-shrink:0; }
+.ring-wrap svg { transform:rotate(-90deg); }
+.ring-bg   { fill:none; stroke:#1a1a1a; stroke-width:3; }
+.ring-fill { fill:none; stroke-width:3; stroke-linecap:round; transition:stroke-dashoffset 1s linear,stroke .4s; }
+.ring-lbl  { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.ring-secs { font-family:'Bebas Neue'; font-size:18px; letter-spacing:.05em; line-height:1; }
+.ring-rest { font-size:5px; color:var(--muted); letter-spacing:2px; }
+.timer-info { flex:1; min-width:0; }
+.timer-exname  { font-size:10px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.timer-nextlbl { font-size:7px; color:#2a2a2a; letter-spacing:2px; margin-top:2px; }
+.tbtns { display:flex; gap:6px; flex-shrink:0; }
+.tbtn { background:transparent; border:1px solid var(--border); color:var(--muted); font-family:'DM Mono'; font-size:8px; letter-spacing:1px; padding:6px 10px; border-radius:3px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.tbtn:active { border-color:#444; color:var(--text); }
+
+/* PROGRESS OVERLAY */
+.prog-overlay { position:fixed; inset:0; background:rgba(0,0,0,.94); z-index:200; display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:opacity .2s; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.prog-overlay.show { opacity:1; pointer-events:all; }
+.po-inner { padding:max(24px,env(safe-area-inset-top)) 18px max(32px,env(safe-area-inset-bottom)); max-width:560px; width:100%; margin:0 auto; }
+.po-close { position:fixed; top:max(16px,env(safe-area-inset-top)); right:18px; background:transparent; border:1px solid var(--border); color:var(--muted); width:30px; height:30px; border-radius:3px; font-family:'DM Mono'; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:201; }
+.po-title { font-family:'Bebas Neue'; font-size:28px; letter-spacing:.05em; margin-bottom:4px; }
+.po-sub   { font-size:8px; color:var(--muted); letter-spacing:2.5px; margin-bottom:20px; }
+.po-sec   { margin-bottom:20px; }
+.po-wklbl { font-size:8px; color:var(--muted); letter-spacing:3px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.po-wknum { font-family:'Bebas Neue'; font-size:18px; letter-spacing:.05em; color:var(--text); }
+.po-wkdate { font-size:7px; color:#333; }
+.po-card  { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:10px 12px; margin-bottom:8px; }
+.po-daylbl { font-size:8px; color:#444; letter-spacing:2px; margin:10px 0 6px; font-family:'Bebas Neue'; }
+.po-exrow { display:flex; align-items:baseline; justify-content:space-between; padding:5px 0; border-bottom:1px solid #0e0e0e; }
+.po-exrow:last-child { border-bottom:none; }
+.po-exname  { font-size:9px; color:var(--dim); flex:1; }
+.po-exreps  { font-size:9px; color:var(--muted); }
+.po-delta   { font-size:8px; margin-left:8px; font-family:'Bebas Neue'; letter-spacing:.05em; }
+.delta-up   { color:var(--pg); }
+.delta-same { color:#333; }
+.nodata { font-size:9px; color:#252525; letter-spacing:2px; text-align:center; padding:40px 0; }
+
+/* MODAL */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:300; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s; }
+.modal-overlay.show { opacity:1; pointer-events:all; }
+.modal-sheet { background:var(--surface); border:1px solid var(--border); border-radius:12px 12px 0 0; padding:24px 22px max(24px,env(safe-area-inset-bottom)); width:100%; max-width:480px; transform:translateY(100%); transition:transform .25s cubic-bezier(.32,.72,0,1); }
+.modal-overlay.show .modal-sheet { transform:translateY(0); }
+.modal-handle { width:36px; height:4px; background:#333; border-radius:2px; margin:0 auto 20px; }
+.modal-prompt { font-size:9px; color:var(--muted); letter-spacing:2.5px; margin-bottom:14px; }
+.modal-input  { width:100%; background:var(--bg); border:1px solid #2e2e2e; color:var(--text); padding:12px 13px; border-radius:4px; font-family:'DM Mono'; font-size:16px; outline:none; caret-color:var(--text); }
+.modal-input:focus { border-color:#444; }
+.modal-btns { display:flex; gap:8px; margin-top:14px; }
+.modal-save   { flex:1; background:var(--surface2); border:1px solid #333; color:var(--text); padding:13px; border-radius:4px; font-family:'DM Mono'; font-size:11px; letter-spacing:1.5px; cursor:pointer; }
+.modal-cancel { flex:1; background:transparent; border:1px solid var(--border); color:var(--muted); padding:13px; border-radius:4px; font-family:'DM Mono'; font-size:11px; letter-spacing:1.5px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div class="hrow">
+      <div>
+        <div class="htitle">
+          <h1>TRAINING LOG</h1>
+          <span class="wk-badge" id="wk-badge">WK 01</span>
+        </div>
+        <div class="hsubrow">
+          <span class="hsub">MON UPPER · TUE CORE · THU LOWER · FRI FULL BODY</span>
+          <div class="wclock off" id="wclock" onclick="toggleClock()">
+            <span class="wcdot off" id="wcdot"></span>
+            <span id="wcdisplay">00:00</span>
+          </div>
+        </div>
+      </div>
+      <div class="hbtns">
+        <button class="hbtn theme-btn" id="theme-btn" onclick="toggleTheme()">☀</button>
+        <button class="hbtn" onclick="openProgress()">▲ PROGRESS</button>
+      </div>
+    </div>
+  </div>
+  <div id="wkstrip"><div class="wgrid" id="wgrid"></div></div>
+  <div id="scroll"><div id="content"></div></div>
+</div>
+
+<!-- Rest Timer -->
+<div id="rest-timer">
+  <div class="ring-wrap">
+    <svg width="56" height="56" viewBox="0 0 56 56">
+      <circle class="ring-bg"   cx="28" cy="28" r="24"/>
+      <circle class="ring-fill" id="ring-fill" cx="28" cy="28" r="24" stroke-dasharray="150.8" stroke-dashoffset="0"/>
+    </svg>
+    <div class="ring-lbl">
+      <span class="ring-secs" id="ring-secs">90</span>
+      <span class="ring-rest">REST</span>
+    </div>
+  </div>
+  <div class="timer-info">
+    <div class="timer-exname" id="timer-exname">—</div>
+    <div class="timer-nextlbl">NEXT UP</div>
+  </div>
+  <div class="tbtns">
+    <button class="tbtn" onclick="timerAdd30()">+30</button>
+    <button class="tbtn" onclick="timerSkip()">SKIP</button>
+  </div>
+</div>
+
+<!-- Progress Overlay -->
+<div class="prog-overlay" id="prog-overlay">
+  <button class="po-close" onclick="closeProgress()">✕</button>
+  <div class="po-inner" id="po-inner"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-prompt" id="modal-prompt"></div>
+    <input class="modal-input" id="modal-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="modal-btns">
+      <button class="modal-save"   id="modal-save">SAVE</button>
+      <button class="modal-cancel" id="modal-cancel">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── ZONE MAP ─────────────────────────────────────────────────────────────────
+const ZONE = {
+  UPPER:{ accent:'#4fc3f7', bg:'#0d1f2d', label:'UPPER' },
+  LOWER:{ accent:'#81c784', bg:'#0d1f0d', label:'LOWER' },
+  CORE: { accent:'#ce93d8', bg:'#1f0d1f', label:'CORE'  },
+  FULL: { accent:'#ffb74d', bg:'#1f1a08', label:'FULL BODY' },
+  CALI: { accent:'#ef9a9a', bg:'#1a0d0d', label:'CALI'  },
+};
+const SDAYS = ['MON','TUE','THU','FRI'];
+const WEEK_DEF = [
+  {day:'MON',key:'MON',lbl:'SESSION 1',rest:false},
+  {day:'TUE',key:'TUE',lbl:'SESSION 2',rest:false},
+  {day:'WED',key:null, lbl:'REST',     rest:true },
+  {day:'THU',key:'THU',lbl:'SESSION 3',rest:false},
+  {day:'FRI',key:'FRI',lbl:'SESSION 4',rest:false},
+  {day:'SAT',key:null, lbl:'REST',     rest:true },
+  {day:'SUN',key:null, lbl:'REST',     rest:true },
+];
+
+// ── MIGRATE OLD KEYS ─────────────────────────────────────────────────────────
+// If new keys are empty but old ones exist, migrate them over
+(function migrate(){
+  const maps = [
+    ['tl_sessions_v3','tl_s4'],['tl_progress_v3','tl_p4'],
+    ['tl_history_v3','tl_h4'],['tl_weekstate_v3','tl_w4'],
+    ['tl_activeday_v3','tl_d4'],['tl_prs_v3','tl_pr4'],
+  ];
+  maps.forEach(([oldKey,newKey])=>{
+    if(!localStorage.getItem(newKey)&&localStorage.getItem(oldKey)){
+      localStorage.setItem(newKey,localStorage.getItem(oldKey));
+    }
+  });
+  // also handle weekState shape difference: old used {weekNum,completedDays} new uses {num,done}
+  try{
+    const ws=JSON.parse(localStorage.getItem('tl_w4')||'null');
+    if(ws&&ws.weekNum!==undefined&&ws.num===undefined){
+      localStorage.setItem('tl_w4',JSON.stringify({num:ws.weekNum||1,start:ws.startDate||new Date().toISOString().split('T')[0],done:ws.completedDays||[]}));
+    }
+  }catch(e){}
+})();
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function parseBaseRep(s){const m=s.match(/^(\d+)/);return m?parseInt(m[1]):null;}
+function bumpReps(s,n){
+  const m=s.match(/^(\d+)(.*)/);if(!m)return s;
+  const base=parseInt(m[1]),rest=m[2];
+  const rm=rest.match(/^[–\-](\d+)(.*)/);
+  if(rm)return (base+n)+'–'+(parseInt(rm[1])+n)+rm[2];
+  return (base+n)+rest;
+}
+function parseRestSecs(s){
+  const sm=s.match(/(\d+)\s*sec/i);if(sm)return parseInt(sm[1]);
+  const mm=s.match(/(\d+)\s*min/i);if(mm)return parseInt(mm[1])*60;
+  const bm=s.match(/^(\d+)$/);if(bm)return parseInt(bm[1]);
+  return 60;
+}
+function fmtClock(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+
+// ── DEFAULT DATA ──────────────────────────────────────────────────────────────
+const DEFAULT = {
+  MON:{fullDay:'MONDAY',label:'SESSION 1',time:'75–85 min',tags:['UPPER'],
+    warmup:[
+      {name:'Scapular Push-Ups', detail:'10 reps · slow and controlled'},
+      {name:'Arm circles',       detail:'20 reps'},
+      {name:'Band pull-aparts',  detail:'15 reps'},
+      {name:'Push-up to downdog',detail:'10 reps'},
+    ],
+    blocks:[
+      {muscle:'CHEST',zone:'UPPER',sets:4,rest:'90 sec',
+       note:'Tempo 3 sec down · 1 sec hold · 1 sec up · stop 1–2 reps before failure',
+       exercises:[{name:'Incline DB Press',reps:'8–10',weight:''},{name:'Freemotion Cable Press',reps:'10–12',weight:''},{name:'Wide Push-Ups',reps:'12–15',weight:''}]},
+      {muscle:'BACK',zone:'UPPER',sets:4,rest:'90 sec',
+       note:'Tempo 1 sec pull · 1 sec hold · 3 sec lower · think elbows to hips',
+       exercises:[{name:'Seated Row',reps:'10',weight:''},{name:'Inverted Rows',reps:'12–15',weight:''}]},
+      {muscle:'SHOULDERS',zone:'UPPER',sets:4,rest:'90 sec',
+       note:'Tempo 2 sec up · 1 sec hold · 3 sec down · brace core on press',
+       exercises:[{name:'Overhead Press (DB)',reps:'8–10',weight:''},{name:'Cable Lateral Raises',reps:'12–15',weight:''},{name:'Reverse Cable Fly',reps:'12',weight:''}]},
+      {muscle:'BICEPS + TRICEPS',zone:'UPPER',sets:3,rest:'45 sec',
+       note:'Superset — no rest between · tempo 2 sec up · 1 sec squeeze · 3 sec down',
+       exercises:[{name:'Standard DB Curl',reps:'10–12',weight:''},{name:'Hammer Curl (DB)',reps:'12 each',weight:''},{name:'Overhead Tricep Extension',reps:'12',weight:''},{name:'Cable Tricep Pushdown',reps:'13',weight:''}]},
+      {muscle:'TRAPS + GRIP',zone:'UPPER',sets:3,rest:'60 sec',
+       note:'Shrugs — 2 sec hold at top · walk tall on carry · dont lean',
+       exercises:[{name:'DB Shrugs',reps:'15',weight:''},{name:"Farmer's Carry",reps:'30 meters',weight:''},{name:'Dead Hang',reps:'40 sec',weight:''}]},
+      {muscle:'CALISTHENICS ENDURANCE',zone:'CALI',sets:3,rest:'45 sec',
+       note:'Pull-up — 1 sec up · 5 sec hold · 5 sec lower · add 1 rep each week',
+       exercises:[{name:'Pull-Up Hold (5s+5s lower)',reps:'6',weight:''},{name:'Push-Up',reps:'20',weight:''},{name:'Dead Hang',reps:'40 sec',weight:''}]},
+    ]},
+  TUE:{fullDay:'TUESDAY',label:'SESSION 2',time:'65–75 min',tags:['CORE','MIDDLE'],
+    warmup:[
+      {name:'Cat-cow',         detail:'10 reps · slow and controlled'},
+      {name:'Dead hangs',      detail:'3 × 20 sec'},
+      {name:'Hip circles',     detail:'10 reps each side'},
+      {name:'Hollow Body Hold',detail:'20 sec · lower back pressed into floor'},
+    ],
+    blocks:[
+      {muscle:'BACK + PULL STRENGTH',zone:'UPPER',sets:5,rest:'90 sec',
+       note:'Negatives = jump up · lower 5 sec slow · think elbows driving to hips',
+       exercises:[{name:'Lat Pulldown (wide grip)',reps:'10–12',weight:''},{name:'Pull-Ups / Negatives',reps:'max clean reps',weight:''}]},
+      {muscle:'REAR DELT + ROTATOR HEALTH',zone:'UPPER',sets:3,rest:'45 sec',
+       note:'Light weight always · squeeze rear delt at end range · never rush these',
+       exercises:[{name:'Face Pulls',reps:'15–16',weight:''},{name:'Rear Delt Fly (DB)',reps:'12–15',weight:''},{name:'External Rotation (band)',reps:'15 each',weight:''}]},
+      {muscle:'CALISTHENICS SKILL',zone:'CALI',sets:4,rest:'60 sec',
+       note:'Skill work not cardio · progress one step every 2–4 weeks',
+       exercises:[{name:'Scapular Pull-Ups',reps:'10',weight:''},{name:'Tuck Front Lever Hold',reps:'10 sec',weight:''},{name:'Serratus Push-Ups',reps:'12',weight:''}]},
+      {muscle:'LOWER BACK + SPINAL ERECTORS',zone:'CORE',sets:3,rest:'60 sec',
+       note:'Tempo 1 sec up · 2 sec hold · 3 sec down · never load heavy',
+       exercises:[{name:'Hyperextensions',reps:'12',weight:''},{name:'Good Mornings (light)',reps:'10',weight:''}]},
+      {muscle:'OBLIQUES',zone:'CORE',sets:4,rest:'60 sec',
+       note:'Twist Sit-Ups — rotate fully · elbow to opposite knee',
+       exercises:[{name:'Twist Sit-Ups',reps:'20 each side',weight:''},{name:'Side Plank',reps:'35 sec each side',weight:''}]},
+      {muscle:'CORE ENDURANCE',zone:'CORE',sets:4,rest:'45 sec',
+       note:'Leg raises — no swinging · Ab wheel — only go as far as lower back stays flat',
+       exercises:[{name:'Hanging Leg Raises',reps:'13',weight:''},{name:'Ab Wheel Rollout',reps:'10',weight:''},{name:'Hollow Body Hold',reps:'25 sec',weight:''}]},
+      {muscle:'ANTI-ROTATION + STABILITY',zone:'CORE',sets:3,rest:'45 sec',
+       note:'Pallof Press — dont rotate · Dead Bug — lower back glued to floor',
+       exercises:[{name:'Pallof Press',reps:'12 each side',weight:''},{name:'Dead Bug',reps:'10 each side',weight:''}]},
+    ]},
+  THU:{fullDay:'THURSDAY',label:'SESSION 3',time:'75–85 min',tags:['LOWER'],
+    warmup:[
+      {name:'Jump Rope',    detail:'2 min easy · activates calves'},
+      {name:'Leg swings',   detail:'16 reps each leg'},
+      {name:'Glute bridges',detail:'20 reps · activates glutes'},
+      {name:'Hip circles',  detail:'11 reps each side'},
+    ],
+    blocks:[
+      {muscle:'QUADS',zone:'LOWER',sets:4,rest:'90 sec',
+       note:'Tempo 3 sec down · 1 sec hold · 1 sec up · full range every rep',
+       exercises:[{name:'Leg Press (heavy)',reps:'10–12',weight:''},{name:'Bulgarian Split Squat',reps:'10 each leg',weight:''}]},
+      {muscle:'HAMSTRINGS',zone:'LOWER',sets:4,rest:'90 sec',
+       note:'RDL — feel hamstring stretch at bottom · drive hips forward at top',
+       exercises:[{name:'Romanian Deadlift (DB)',reps:'10–11',weight:''},{name:'Leg Curl (machine)',reps:'12–13',weight:''}]},
+      {muscle:'GLUTES',zone:'LOWER',sets:3,rest:'60 sec',
+       note:'Hip Thrust — drive through heels · squeeze 2 sec at top every rep',
+       exercises:[{name:'Hip Thrust (DB or barbell)',reps:'12',weight:''},{name:'Glute Bridge Hold',reps:'40 sec',weight:''}]},
+      {muscle:'HIP FLEXORS',zone:'LOWER',sets:3,rest:'45 sec',
+       note:'Critical for boxing knee drives · control the lower — no swinging',
+       exercises:[{name:'Hanging Knee Raises',reps:'12',weight:''},{name:'Dragon Flag progression',reps:'6',weight:''}]},
+      {muscle:'LOWER BACK',zone:'CORE',sets:3,rest:'60 sec',
+       note:'Tempo 1 sec up · 2 sec hold · 3 sec lower · posture and injury prevention',
+       exercises:[{name:'Hyperextensions',reps:'12',weight:''},{name:'Good Mornings (light)',reps:'10',weight:''}]},
+      {muscle:'CALVES + ANKLE',zone:'LOWER',sets:3,rest:'45 sec',
+       note:'Single leg — full range all the way down and up',
+       exercises:[{name:'Single Leg Calf Raises',reps:'15 each',weight:''},{name:'Tibialis Raises',reps:'20',weight:''}]},
+      {muscle:'CALISTHENICS FINISHER',zone:'CALI',sets:3,rest:'60 sec',
+       note:'Pistol — assisted until full range · Wall Sit — 90 degree angle',
+       exercises:[{name:'Pistol Squat progression',reps:'6 each leg',weight:''},{name:'Jump Squats',reps:'12',weight:''},{name:'Wall Sit',reps:'45 sec',weight:''}]},
+    ]},
+  FRI:{fullDay:'FRIDAY',label:'SESSION 4',time:'70–80 min',tags:['FULL BODY'],
+    warmup:[
+      {name:'Inchworm',     detail:'8 reps · full body mobility'},
+      {name:'Jumping jacks',detail:'30 reps'},
+      {name:'Arm swings',   detail:'20 reps'},
+      {name:'Hip openers',  detail:'10 reps each side'},
+    ],
+    blocks:[
+      {muscle:'CALISTHENICS SKILL OPENER',zone:'CALI',sets:3,rest:'60 sec',
+       note:'Do completely fresh · Muscle-Up use momentum until strict',
+       exercises:[{name:'Muscle-Up or Chest-to-Bar Pull-Up',reps:'max reps',weight:''},{name:'Handstand Hold (wall)',reps:'20 sec',weight:''},{name:'Dips',reps:'12',weight:''}]},
+      {muscle:'SERRATUS + REAR DELT HEALTH',zone:'UPPER',sets:3,rest:'45 sec',
+       note:'Protects shoulder joint long term — never skip · Y-Raises light weight only',
+       exercises:[{name:'Serratus Push-Ups',reps:'12',weight:''},{name:'Face Pulls',reps:'16',weight:''},{name:'Y-Raises (prone on bench)',reps:'12',weight:''}]},
+      {muscle:'FULL BODY CIRCUIT',zone:'FULL',sets:4,rest:'90 sec',
+       note:'Quality over speed · track total time · aim to get faster each week',
+       exercises:[{name:'Pull-Ups / Negatives',reps:'max reps',weight:''},{name:'Archer Push-Ups',reps:'8 each side',weight:''},{name:'Romanian Deadlift DB',reps:'10',weight:''},{name:'Box Jumps',reps:'6',weight:''},{name:'Twist Sit-Ups',reps:'20 each side',weight:''},{name:"Farmer's Carry",reps:'30 meters',weight:''},{name:'L-sit or Tuck Hold',reps:'25 sec',weight:''}]},
+      {muscle:'ENDURANCE FINISHER',zone:'FULL',sets:3,rest:'30 sec',
+       note:'Minimal rest — tests conditioning · push through fatigue but keep form',
+       exercises:[{name:'Burpees',reps:'10',weight:''},{name:'Mountain Climbers',reps:'20',weight:''},{name:'Push-Ups',reps:'15',weight:''},{name:'Jump Rope or Shadow Boxing',reps:'40 sec',weight:''}]},
+    ]},
+};
+
+// ── PATCH SAVED SESSIONS WITH NEW EXERCISES/BLOCKS ───────────────────────────
+// Runs once — adds missing exercises/blocks to already-saved data
+(function patchSessions(){
+  const s = JSON.parse(localStorage.getItem('tl_s4')||'null');
+  if(!s) return; // no saved data, DEFAULT will be used as-is
+
+  let dirty = false;
+
+  // Helper: add exercise to a block if not already present
+  function addEx(block, ex){
+    if(!block.exercises.find(e=>e.name===ex.name)){
+      block.exercises.push(ex); dirty=true;
+    }
+  }
+  // Helper: add a whole block after a named block if not present
+  function addBlockAfter(blocks, afterMuscle, newBlock){
+    if(blocks.find(b=>b.muscle===newBlock.muscle)) return;
+    const idx = blocks.findIndex(b=>b.muscle===afterMuscle);
+    const pos = idx >= 0 ? idx+1 : blocks.length;
+    blocks.splice(pos, 0, newBlock); dirty=true;
+  }
+
+  // MON — Freemotion Cable Press into CHEST block (after Incline DB Press)
+  if(s.MON){
+    const chest = s.MON.blocks.find(b=>b.muscle==='CHEST');
+    if(chest){
+      const hasFreemotion = chest.exercises.find(e=>e.name==='Freemotion Cable Press');
+      if(!hasFreemotion){
+        const inclineIdx = chest.exercises.findIndex(e=>e.name==='Incline DB Press');
+        chest.exercises.splice(inclineIdx>=0 ? inclineIdx+1 : 1, 0, {name:'Freemotion Cable Press',reps:'10–12',weight:''});
+        dirty=true;
+      }
+    }
+  }
+
+  // TUE — REAR DELT + ROTATOR HEALTH block after BACK + PULL STRENGTH
+  if(s.TUE){
+    addBlockAfter(s.TUE.blocks, 'BACK + PULL STRENGTH', {
+      muscle:'REAR DELT + ROTATOR HEALTH',zone:'UPPER',sets:3,rest:'45 sec',
+      note:'Light weight always · squeeze rear delt at end range · never rush these',
+      exercises:[{name:'Face Pulls',reps:'15–16',weight:''},{name:'Rear Delt Fly (DB)',reps:'12–15',weight:''},{name:'External Rotation (band)',reps:'15 each',weight:''}]
+    });
+    // TUE — ANTI-ROTATION + STABILITY (may already exist from original data)
+    addBlockAfter(s.TUE.blocks, 'CORE ENDURANCE', {
+      muscle:'ANTI-ROTATION + STABILITY',zone:'CORE',sets:3,rest:'45 sec',
+      note:'Pallof Press — dont rotate · Dead Bug — lower back glued to floor',
+      exercises:[{name:'Pallof Press',reps:'12 each side',weight:''},{name:'Dead Bug',reps:'10 each side',weight:''}]
+    });
+  }
+
+  // FRI — SERRATUS + REAR DELT HEALTH after CALISTHENICS SKILL OPENER
+  if(s.FRI){
+    addBlockAfter(s.FRI.blocks, 'CALISTHENICS SKILL OPENER', {
+      muscle:'SERRATUS + REAR DELT HEALTH',zone:'UPPER',sets:3,rest:'45 sec',
+      note:'Protects shoulder joint long term — never skip · Y-Raises light weight only',
+      exercises:[{name:'Serratus Push-Ups',reps:'12',weight:''},{name:'Face Pulls',reps:'16',weight:''},{name:'Y-Raises (prone on bench)',reps:'12',weight:''}]
+    });
+  }
+
+  if(dirty){
+    localStorage.setItem('tl_s4', JSON.stringify(s));
+    console.log('[patch] sessions updated with new exercises/blocks');
+  }
+})();
+let sessions   = JSON.parse(localStorage.getItem('tl_s4')||'null') || JSON.parse(JSON.stringify(DEFAULT));
+let prog       = JSON.parse(localStorage.getItem('tl_p4')||'{}');
+let prs        = JSON.parse(localStorage.getItem('tl_pr4')||'{}');
+let history    = JSON.parse(localStorage.getItem('tl_h4')||'[]');
+let weekState  = JSON.parse(localStorage.getItem('tl_w4')||'null') || {num:1,start:today(),done:[]};
+let activeDay  = localStorage.getItem('tl_d4')||'MON';
+let activeFilter='ALL';
+let newPRKey   = null;
+
+function today(){return new Date().toISOString().split('T')[0];}
+function save(){
+  localStorage.setItem('tl_s4',JSON.stringify(sessions));
+  localStorage.setItem('tl_p4',JSON.stringify(prog));
+  localStorage.setItem('tl_pr4',JSON.stringify(prs));
+  localStorage.setItem('tl_h4',JSON.stringify(history));
+  localStorage.setItem('tl_w4',JSON.stringify(weekState));
+  localStorage.setItem('tl_d4',activeDay);
+}
+
+// ── PROGRESS LOGIC ───────────────────────────────────────────────────────────
+function skey(day,bi,ei,si){return day+'-'+bi+'-'+ei+'-'+si;}
+function isDone(day,bi,ei,si){return !!prog[skey(day,bi,ei,si)];}
+function exDone(day,bi,ei){
+  const n=sessions[day]?.blocks[bi]?.sets||0;
+  return Array.from({length:n},(_,s)=>isDone(day,bi,ei,s)).filter(Boolean).length;
+}
+function blockDone(day,bi){
+  const b=sessions[day]?.blocks[bi];
+  return b && b.exercises.every((_,ei)=>exDone(day,bi,ei)===b.sets);
+}
+function dayDone(day){
+  const s=sessions[day];
+  return s && s.blocks.every((_,bi)=>blockDone(day,bi));
+}
+function totalSets(day){
+  return (sessions[day]?.blocks||[]).reduce((a,b)=>a+b.sets*b.exercises.length,0);
+}
+function completedSets(day){
+  return (sessions[day]?.blocks||[]).reduce((a,b,bi)=>
+    a+b.exercises.reduce((ea,_,ei)=>ea+exDone(day,bi,ei),0),0);
+}
+function checkDone(day){
+  if(dayDone(day)&&!weekState.done.includes(day)){
+    weekState.done.push(day);
+    if(SDAYS.every(d=>weekState.done.includes(d))) advanceWeek();
+  }
+}
+function snapshot(){
+  const snap={};
+  SDAYS.forEach(day=>{
+    snap[day]={};
+    (sessions[day]?.blocks||[]).forEach((b,bi)=>{
+      snap[day][bi]={};
+      b.exercises.forEach((ex,ei)=>{snap[day][bi][ei]={reps:ex.reps,weight:ex.weight};});
+    });
+  });
+  return snap;
+}
+function advanceWeek(){
+  history.push({num:weekState.num,start:weekState.start,snap:snapshot()});
+  if(history.length>12) history.splice(0,history.length-12);
+  SDAYS.forEach(day=>{
+    (sessions[day]?.blocks||[]).forEach(b=>{
+      b.exercises.forEach(ex=>{ex.reps=bumpReps(ex.reps,1);});
+    });
+  });
+  prog={};
+  weekState={num:weekState.num+1,start:today(),done:[]};
+  save();
+}
+
+// ── MODAL ────────────────────────────────────────────────────────────────────
+let modalCb=null;
+function openModal(prompt,val,cb){
+  modalCb=cb;
+  document.getElementById('modal-prompt').textContent=prompt.toUpperCase();
+  document.getElementById('modal-input').value=val;
+  document.getElementById('modal').classList.add('show');
+  setTimeout(()=>document.getElementById('modal-input').focus(),250);
+}
+function closeModal(){document.getElementById('modal').classList.remove('show');modalCb=null;}
+document.getElementById('modal-save').onclick=()=>{if(modalCb)modalCb(document.getElementById('modal-input').value);closeModal();};
+document.getElementById('modal-cancel').onclick=closeModal;
+document.getElementById('modal-input').addEventListener('keydown',e=>{if(e.key==='Enter'){if(modalCb)modalCb(document.getElementById('modal-input').value);closeModal();}});
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+
+// ── REST TIMER ───────────────────────────────────────────────────────────────
+const CIRC=150.8;
+let tInterval=null,tTotal=0,tRemain=0,tAccent='#4fc3f7';
+
+function beep(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [0,.18,.36].forEach((t,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=i<2?880:1200;o.type='sine';
+      g.gain.setValueAtTime(.25,ctx.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+t+.12);
+      o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+.14);
+    });
+  }catch(e){}
+}
+function vib(p){if(navigator.vibrate)navigator.vibrate(p);}
+
+function startTimer(secs,accent,next){
+  clearInterval(tInterval);
+  tTotal=secs;tRemain=secs;tAccent=accent;
+  const rf=document.getElementById('ring-fill');
+  if(rf)rf.style.stroke=accent;
+  const te=document.getElementById('timer-exname');
+  if(te)te.textContent=next||'—';
+  updateTimer();
+  document.getElementById('rest-timer').classList.add('show');
+  tInterval=setInterval(()=>{
+    tRemain--;updateTimer();
+    if(tRemain<=0){
+      clearInterval(tInterval);tInterval=null;
+      beep();vib([80,60,80,60,120]);
+      const rt=document.getElementById('rest-timer');
+      if(rt){rt.classList.add('flash');setTimeout(()=>rt.classList.remove('flash'),600);}
+      setTimeout(hideTimer,3000);
+    }
+  },1000);
+}
+function updateTimer(){
+  const rs=document.getElementById('ring-secs');
+  const rf=document.getElementById('ring-fill');
+  if(!rs||!rf)return;
+  rs.textContent=tRemain;
+  rf.style.strokeDashoffset=CIRC*(1-Math.max(0,tRemain)/Math.max(1,tTotal));
+  const col=tRemain<=5?'#ef5350':tRemain<=10?'#ffb74d':tAccent;
+  rf.style.stroke=col;
+  rs.style.color=col==='#ef5350'||col==='#ffb74d'?col:'var(--text)';
+}
+function hideTimer(){
+  clearInterval(tInterval);tInterval=null;
+  document.getElementById('rest-timer').classList.remove('show');
+}
+function timerAdd30(){
+  const rt=document.getElementById('rest-timer');
+  if(!rt||!rt.classList.contains('show'))return;
+  tRemain+=30;tTotal=Math.max(tTotal,tRemain);updateTimer();
+  if(!tInterval){
+    tInterval=setInterval(()=>{
+      tRemain--;updateTimer();
+      if(tRemain<=0){clearInterval(tInterval);tInterval=null;beep();vib([80,60,80,60,120]);setTimeout(hideTimer,3000);}
+    },1000);
+  }
+}
+function timerSkip(){hideTimer();}
+
+// ── WORKOUT CLOCK ─────────────────────────────────────────────────────────────
+let cInterval=null,cElapsed=0,cRunning=false,cDay=null;
+
+function startClock(day){
+  if(cDay!==day){cElapsed=0;cDay=day;}
+  if(cRunning)return;
+  cRunning=true;
+  const dot=document.getElementById('wcdot');
+  if(dot){dot.classList.remove('off');}
+  const wc=document.getElementById('wclock');
+  if(wc)wc.classList.remove('off');
+  cInterval=setInterval(()=>{cElapsed++;updateClock();},1000);
+}
+function toggleClock(){
+  if(!cDay)return;
+  if(cRunning){
+    clearInterval(cInterval);cInterval=null;cRunning=false;
+    const dot=document.getElementById('wcdot');
+    if(dot)dot.classList.add('off');
+  }else{startClock(cDay);}
+}
+function resetClock(day){
+  clearInterval(cInterval);cInterval=null;cRunning=false;cDay=day;cElapsed=0;
+  const dot=document.getElementById('wcdot');
+  if(dot)dot.classList.add('off');
+  const wc=document.getElementById('wclock');
+  if(wc)wc.classList.remove('running','over','wayover');
+  const disp=document.getElementById('wcdisplay');
+  if(disp)disp.textContent='00:00';
+}
+function updateClock(){
+  const disp=document.getElementById('wcdisplay');
+  const wc=document.getElementById('wclock');
+  if(!disp||!wc)return;
+  disp.textContent=fmtClock(cElapsed);
+  const s=sessions[cDay];
+  let tmax=0;
+  if(s){
+    const m=s.time.match(/(\d+)[–\-](\d+)/);
+    if(m)tmax=parseInt(m[2])*60;
+    else{const m2=s.time.match(/(\d+)/);if(m2)tmax=parseInt(m2[1])*60;}
+  }
+  wc.classList.remove('running','over','wayover');
+  if(cElapsed===0)return;
+  if(tmax>0&&cElapsed>tmax+300)wc.classList.add('wayover');
+  else if(tmax>0&&cElapsed>tmax)wc.classList.add('over');
+  else wc.classList.add('running');
+}
+
+// ── PROGRESS OVERLAY ─────────────────────────────────────────────────────────
+function openProgress(){renderProgress();document.getElementById('prog-overlay').classList.add('show');}
+function closeProgress(){document.getElementById('prog-overlay').classList.remove('show');}
+
+function prSection(){
+  const entries=Object.entries(prs);
+  if(!entries.length)return '';
+  entries.sort((a,b)=>(b[1].date||'').localeCompare(a[1].date||''));
+  let h='<div class="po-wklbl"><span class="po-wknum" style="color:#ffb74d">★ PRs</span><span class="po-wkdate">PERSONAL RECORDS</span></div><div class="po-card" style="margin-bottom:18px;">';
+  entries.forEach(([name,rec])=>{
+    h+='<div class="po-exrow"><span class="po-exname">'+name+'</span><span class="po-exreps" style="color:#ffb74d">'+rec.weight+'</span><span class="po-delta" style="color:#555">'+( rec.date||'')+'</span></div>';
+  });
+  return h+'</div>';
+}
+
+function renderProgress(){
+  const el=document.getElementById('po-inner');
+  if(!el)return;
+  if(!history.length){
+    el.innerHTML='<div class="po-title">PROGRESS</div><div class="po-sub">WEEK-OVER-WEEK REP PROGRESSION</div>'+prSection()+'<div class="nodata">COMPLETE YOUR FIRST FULL WEEK<br>TO SEE REP PROGRESSION</div>';
+    return;
+  }
+  const toShow=history.slice(-4);
+  let html='<div class="po-title">PROGRESS</div><div class="po-sub">WEEK-OVER-WEEK REP PROGRESSION · LAST '+toShow.length+' WK'+(toShow.length>1?'S':'')+'</div>'+prSection();
+  toShow.forEach((wk,wi)=>{
+    const prev=wi>0?toShow[wi-1]:null;
+    html+='<div class="po-sec"><div class="po-wklbl"><span class="po-wknum">WK '+wk.num+'</span><span class="po-wkdate">'+wk.start+'</span></div>';
+    SDAYS.forEach(day=>{
+      if(!wk.snap[day])return;
+      html+='<div class="po-daylbl">'+(sessions[day]?.fullDay||day)+'</div><div class="po-card">';
+      (sessions[day]?.blocks||[]).forEach((block,bi)=>{
+        Object.entries(wk.snap[day][bi]||{}).forEach(([eis,val])=>{
+          const ei=parseInt(eis);
+          const name=block.exercises[ei]?.name||'';
+          let delta='';
+          if(prev){
+            const pr2=prev.snap?.[day]?.[bi]?.[ei]?.reps;
+            if(pr2&&pr2!==val.reps){
+              const pn=parseBaseRep(pr2),cn=parseBaseRep(val.reps);
+              if(pn!==null&&cn!==null){const d=cn-pn;delta='<span class="po-delta '+(d>0?'delta-up':'delta-same')+'">'+(d>0?'+':'')+d+'</span>';}
+            }
+          }
+          html+='<div class="po-exrow"><span class="po-exname">'+name+'</span><span class="po-exreps">'+val.reps+'</span>'+delta+'</div>';
+        });
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  if(toShow.length>=4){
+    const f=toShow[0],l=toShow[toShow.length-1];
+    html+='<div class="po-wklbl" style="margin-top:20px;border-top:1px solid var(--border);padding-top:14px;"><span style="color:var(--gold);font-size:8px;letter-spacing:2.5px;">4-WEEK GAINS SUMMARY</span></div><div class="po-card">';
+    SDAYS.forEach(day=>{
+      (sessions[day]?.blocks||[]).forEach((block,bi)=>{
+        block.exercises.forEach((_,ei)=>{
+          const fr=f.snap?.[day]?.[bi]?.[ei]?.reps,lr=l.snap?.[day]?.[bi]?.[ei]?.reps;
+          if(!fr||!lr)return;
+          const fn=parseBaseRep(fr),ln=parseBaseRep(lr);
+          if(fn===null||ln===null)return;
+          const g=ln-fn;if(!g)return;
+          html+='<div class="po-exrow"><span class="po-exname">'+block.exercises[ei].name+'</span><span class="po-exreps" style="color:#666">'+fr+' → '+lr+'</span><span class="po-delta delta-up">+'+g+' total</span></div>';
+        });
+      });
+    });
+    html+='</div>';
+  }
+  el.innerHTML=html;
+}
+
+// ── THEME ────────────────────────────────────────────────────────────────────
+let theme=localStorage.getItem('tl_theme')||'dark';
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme',theme);
+  const btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=theme==='dark'?'☀':'☽';
+  document.getElementById('theme-color-meta').content=theme==='dark'?'#080808':'#f5f3f0';
+}
+function toggleTheme(){theme=theme==='dark'?'light':'dark';localStorage.setItem('tl_theme',theme);applyTheme();}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderWeek(){
+  document.getElementById('wgrid').innerHTML=WEEK_DEF.map(w=>{
+    const done=!w.rest&&weekState.done.includes(w.key);
+    return '<button class="day-btn'+(w.rest?' rest':'')+(!w.rest&&activeDay===w.key?' active':'')+(done?' done':'')+'" onclick="'+(w.rest?'':('setDay(\''+w.key+'\')'))+'">'
+      +'<span class="dn">'+w.day+'</span><span class="dl">'+w.lbl+'</span></button>';
+  }).join('');
+  document.getElementById('wk-badge').textContent='WK '+String(weekState.num).padStart(2,'0');
+}
+
+function renderSession(){
+  const el=document.getElementById('content');
+  const s=sessions[activeDay];
+  if(!s){el.innerHTML='<div class="rest-day-view">REST / BOXING DAY</div>';return;}
+
+  const tot=totalSets(activeDay),comp=completedSets(activeDay),pct=tot>0?comp/tot*100:0;
+  const tagsH=s.tags.map(t=>{const z=ZONE[t]||ZONE.FULL;return '<span class="ztag" style="background:'+z.bg+';color:'+z.accent+';border:1px solid '+z.accent+'22">'+t+'</span>';}).join('');
+  const filters=['ALL','UPPER','LOWER','CORE','FULL','CALI'];
+  const filH=filters.map(f=>{
+    const z=ZONE[f]||{accent:'#fff'};
+    const on=activeFilter===f;
+    return '<button class="filter-btn'+(on?' on':'')+'" style="'+(on&&f!=='ALL'?'color:'+z.accent+';border-color:'+z.accent+'44':'')+'" onclick="setFilter(\''+f+'\')">'+f+'</button>';
+  }).join('');
+  const wuH=activeFilter==='ALL'?'<div class="wu-card"><div class="card-lbl">WARM UP</div>'+s.warmup.map(w=>'<div class="wu-row"><span class="wu-name">'+w.name+'</span><span class="wu-det">'+w.detail+'</span></div>').join('')+'</div>':'';
+  const wkDone=SDAYS.every(d=>weekState.done.includes(d));
+  const bannerH=activeFilter==='ALL'&&wkDone?'<div class="wk-banner"><span class="wb-icon">●</span><div><div class="wb-text">WEEK '+weekState.num+' COMPLETE</div><div class="wb-sub">REPS ADVANCED · NEW WEEK BEGINS</div></div></div>':'';
+
+  const blocksH=s.blocks.map((block,bi)=>{
+    if(activeFilter!=='ALL'&&block.zone!==activeFilter)return '';
+    const z=ZONE[block.zone]||ZONE.FULL;
+    const bAllDone=blockDone(activeDay,bi);
+
+    const exH=block.exercises.map((ex,ei)=>{
+      const ed=exDone(activeDay,bi,ei);
+      const ep=block.sets>0?ed/block.sets*100:0;
+
+      // rep progression pill
+      let pillH='';
+      if(history.length>0){
+        const prev=history[history.length-1]?.snap?.[activeDay]?.[bi]?.[ei];
+        if(prev&&prev.reps!==ex.reps){
+          const pn=parseBaseRep(prev.reps),cn=parseBaseRep(ex.reps);
+          if(pn!==null&&cn!==null&&cn>pn)pillH='<span class="prog-pill new">+' +(cn-pn)+'</span>';
+        }
+      }
+
+      // PR badge
+      const prD=prs[ex.name];
+      const isNewPR=newPRKey===ex.name;
+      const isPR=prD&&ex.weight&&ex.weight===prD.weight;
+      const prH=isNewPR?'<span class="pr-badge">★ PR</span>':isPR?'<span class="pr-badge" style="animation:none">★</span>':'';
+
+      const dotsH=Array.from({length:block.sets},(_,si)=>{
+        const d=isDone(activeDay,bi,ei,si);
+        return '<div class="set-dot'+(d?' on':'')+'" style="'+(d?'background:'+z.bg+';border-color:'+z.accent+'44;color:'+z.accent:'')+'" onclick="toggleSet(\''+activeDay+'\','+bi+','+ei+','+si+')">'+(d?'✓':'')+'</div>';
+      }).join('');
+
+      return '<div class="ex-block">'
+        +'<div class="ex-row">'
+        +'<span class="ex-name">'+ex.name+'</span>'
+        +'<span class="ex-reps editable" onclick="editReps(\''+activeDay+'\','+bi+','+ei+')">'+ex.reps+pillH+'</span>'
+        +'<span class="weight-badge'+(ex.weight?' hw':'')+'" onclick="editWeight(\''+activeDay+'\','+bi+','+ei+')">'+( ex.weight||'+ kg')+prH+'</span>'
+        +'</div>'
+        +'<div class="ex-sets-row">'
+        +'<span class="ex-sets-label">SETS</span>'
+        +dotsH
+        +'<div class="ex-sets-bar"><div class="ex-sets-fill" style="width:'+ep+'%;background:'+z.accent+'"></div></div>'
+        +'</div></div>';
+    }).join('');
+
+    return '<div class="block'+(bAllDone?' done':'')+'" style="border-left-color:'+z.accent+'33">'
+      +'<div class="bhead">'
+      +'<div class="bhl"><span class="bmuscle">'+block.muscle+'</span><span class="bztag" style="background:'+z.bg+';color:'+z.accent+'">'+z.label+'</span></div>'
+      +'<div class="bhr"><span class="sets-ct editable" onclick="editSets(\''+activeDay+'\','+bi+')">'+block.sets+' sets</span>'
+      +'<span class="rest-badge editable" onclick="editRest(\''+activeDay+'\','+bi+')">REST '+block.rest+'</span></div>'
+      +'</div>'
+      +'<div class="bbody">'+(block.note?'<div class="note">⚑ '+block.note+'</div>':'')+exH+'</div>'
+      +'</div>';
+  }).join('');
+
+  el.innerHTML='<div class="si"><div class="sh">'
+    +'<div class="str"><span class="stitle">'+s.fullDay+' — '+s.label+'</span><span class="stime">⏱ '+s.time+'</span></div>'
+    +'<div class="tags-row">'+tagsH+'</div>'
+    +'<div class="oprog"><div class="opbar"><div class="opfill" style="width:'+pct+'%"></div></div><span class="oplbl">'+comp+'/'+tot+' sets</span></div>'
+    +'</div>'
+    +'<div class="frow">'+filH+'</div>'
+    +bannerH+wuH+blocksH
+    +'</div>';
+}
+
+function render(){renderWeek();renderSession();newPRKey=null;}
+
+// ── ACTIONS ──────────────────────────────────────────────────────────────────
+function setDay(key){activeDay=key;activeFilter='ALL';resetClock(key);save();render();}
+function setFilter(f){activeFilter=f;render();}
+
+function toggleSet(day,bi,ei,si){
+  const k=skey(day,bi,ei,si);
+  const was=!!prog[k];
+  prog[k]=!was;
+  if(!was){
+    startClock(day);
+    const block=sessions[day]?.blocks[bi];
+    if(block){
+      const secs=parseRestSecs(block.rest);
+      const z=ZONE[block.zone]||ZONE.FULL;
+      let next='';
+      if(ei+1<block.exercises.length)next=block.exercises[ei+1].name;
+      else if(bi+1<sessions[day].blocks.length)next=sessions[day].blocks[bi+1].exercises[0]?.name||'';
+      startTimer(secs,z.accent,next);
+      vib(30);
+    }
+  }else{hideTimer();}
+  checkDone(day);
+  save();render();
+}
+
+function editReps(day,bi,ei){
+  const ex=sessions[day].blocks[bi].exercises[ei];
+  openModal('Reps — '+ex.name,ex.reps,val=>{sessions[day].blocks[bi].exercises[ei].reps=val;save();render();});
+}
+function editWeight(day,bi,ei){
+  const ex=sessions[day].blocks[bi].exercises[ei];
+  openModal('Weight — '+ex.name,ex.weight,val=>{
+    sessions[day].blocks[bi].exercises[ei].weight=val;
+    const n=parseFloat(val.replace(',','.').replace(/[^\d.]/g,''));
+    if(!isNaN(n)&&n>0){
+      const prev=prs[ex.name]?.weightNum||0;
+      if(n>prev){prs[ex.name]={weight:val,weightNum:n,date:today()};newPRKey=ex.name;}
+    }
+    save();render();
+  });
+}
+function editSets(day,bi){
+  openModal('Number of sets',String(sessions[day].blocks[bi].sets),val=>{
+    const n=parseInt(val);if(n>0){sessions[day].blocks[bi].sets=n;save();render();}
+  });
+}
+function editRest(day,bi){
+  openModal('Rest time (e.g. 90 sec)',sessions[day].blocks[bi].rest,val=>{
+    sessions[day].blocks[bi].rest=val;save();render();
+  });
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+applyTheme();
+resetClock(activeDay);
+render();
+</script>
+</body>
+</html>
